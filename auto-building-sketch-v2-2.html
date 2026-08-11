@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Auto Building Sketch V2</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#1f2937;background:#f6f7f9}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1280px;margin:auto;padding:16px}
+.grid{display:grid;grid-template-columns:360px 1fr;gap:16px}.card{background:#fff;border:1px solid #ddd;border-radius:16px;padding:15px;box-shadow:0 2px 8px #00000008}
+h1,h2,h3{margin:0 0 8px}.muted{color:#6b7280;font-size:13px}.row{display:flex;gap:8px;align-items:center;justify-content:space-between}.stack{display:grid;gap:10px}
+.floor{border:1px solid #ddd;border-radius:12px;padding:11px}.item{border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-top:8px;background:#fff}
+label{font-size:13px;display:block}input,select{width:100%;padding:9px;border:1px solid #d1d5db;border-radius:9px;margin-top:4px;font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{border:1px solid #cfd3d8;background:#fff;border-radius:9px;padding:9px 12px;cursor:pointer}.primary{background:#1f2937;color:#fff;border-color:#1f2937}
+.typeBtns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}.typeBtns .btn{font-size:13px}
+.planbox{background:#fff;border:1px solid #ddd;border-radius:16px;padding:10px;overflow:hidden}
+.plan-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.plan-svg{width:100%;min-width:620px;display:block;background:#fff;border-radius:10px;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{border:1px solid #e5e7eb;border-radius:10px;padding:12px}.num{font-size:22px;font-weight:700}
+table th,table td{border:1px solid #e5e7eb;padding:8px;text-align:right;white-space:nowrap}table th:first-child,table td:first-child{text-align:left}table thead th{background:#f9fafb}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.notice{padding:10px;border-radius:9px;background:#f0fdf4;border:1px solid #bbf7d0;font-size:13px;display:none}
+.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.legend span{font-size:12px;padding:5px 8px;border-radius:99px;border:1px solid #ddd}
+.dragging{cursor:grabbing!important;opacity:.82}.drag-box{touch-action:pan-y}@media(max-width:850px){.wrap{padding:8px}.card{border-radius:14px;padding:12px}.grid{gap:10px}.planbox{padding:6px}.plan-svg{min-width:0;width:100%;height:auto}.actions{gap:6px}.actions .btn{flex:1 1 auto}}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.summary{grid-template-columns:1fr 1fr}.wrap{padding:10px}}
+@media print{.grid{grid-template-columns:1fr}.card:first-child{display:none}.plan-svg{min-width:0}.planbox{border:0;box-shadow:none}}
+</style>
+</head>
+<body style="overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch;">
+<div class="wrap">
+  <div class="row" style="margin-bottom:14px">
+    <div><h1>Auto Building Sketch</h1></div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>ข้อมูลทรัพย์</h2>
+      <div class="stack">
+        <label>ประเภททรัพย์
+          <select id="propertyType">
+            <option value="บ้านเดี่ยว">บ้านเดี่ยว</option><option value="บ้านแฝด">บ้านแฝด</option><option value="ทาวน์เฮ้าส์">ทาวน์เฮ้าส์</option>
+            <option value="อาคารพาณิชย์">อาคารพาณิชย์</option><option value="อาคารสำนักงาน">อาคารสำนักงาน</option><option value="โรงงาน">โรงงาน</option><option value="โกดัง">โกดัง</option><option value="อื่น ๆ">อื่น ๆ</option>
+          </select>
+        </label>
+        <div id="otherTypeWrap" style="display:none"><label>ระบุประเภททรัพย์<input id="otherType" placeholder="พิมพ์ประเภททรัพย์"></label></div>
+      </div>
+      <div class="actions"><button class="btn primary" id="save">บันทึกทรัพย์</button><button class="btn" id="load">โหลดข้อมูล</button><button class="btn" id="clear">เริ่มใหม่</button></div>
+      <div id="notice" class="notice"></div><div id="propertyLabel" class="muted" style="margin-top:8px"></div>
+      <hr style="border:0;border-top:1px solid #eee;margin:15px 0">
+
+      <div class="row"><h2>ข้อมูลสำรวจ</h2><button class="btn" id="addFloor">+ ชั้น</button></div>
+      <div id="editor" class="stack"></div>
+
+      <div class="typeBtns">
+        <button class="btn" data-add-type="พื้นที่หลัก">+ อาคารหลัก</button>
+        <button class="btn" data-add-type="ส่วนต่อเติม">+ ส่วนต่อเติม</button>
+        <button class="btn" data-add-type="ที่จอดรถ">+ ที่จอดรถ</button>
+        <button class="btn" data-add-type="เฉลียง">+ เฉลียง</button>
+        <button class="btn" data-add-type="ระเบียง">+ ระเบียง</button>
+        <button class="btn" data-add-type="อื่น ๆ">+ อื่น ๆ</button>
+      </div>
+
+      <button class="btn primary" style="width:100%;margin-top:10px" id="generate">สร้าง / จัดผังอัตโนมัติ</button>
+      <button class="btn" style="width:100%;margin-top:8px" id="resetLayout">↺ จัดตำแหน่งกล่องใหม่</button>
+
+      <hr style="border:0;border-top:1px solid #eee;margin:15px 0">
+      <h3>Export</h3><div class="actions"><button class="btn primary" id="exportImage">Export รูปภาพ (PNG)</button></div>
+    </section>
+
+    <section class="stack">
+      <div class="card">
+        <div class="row"><h2>ผังสิ่งปลูกสร้าง</h2><strong id="grand">0.00 ตร.ม.</strong></div>
+        <div class="legend">
+          <span style="background:#fce7f3">อาคารหลัก</span><span style="background:#dcfce7">ส่วนต่อเติม</span><span style="background:#fef3c7">ที่จอดรถ</span><span style="background:#dbeafe">ระเบียง</span><span style="background:#ffedd5">เฉลียง</span><span style="background:#f3e8ff">อื่น ๆ</span>
+        </div>
+      </div>
+      <div id="plans" class="stack"></div>
+      <div class="card"><h2>สรุปพื้นที่</h2><div id="summary" class="summary"></div>
+        <div style="overflow:auto;margin-top:14px"><table id="areaTable" style="width:100%;border-collapse:collapse;font-size:13px"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const TYPES=['พื้นที่หลัก','ส่วนต่อเติม','ที่จอดรถ','ระเบียง','เฉลียง','อื่น ๆ'];
+const COLORS={'พื้นที่หลัก':'#fce7f3','ส่วนต่อเติม':'#dcfce7','ที่จอดรถ':'#fef3c7','ระเบียง':'#dbeafe','เฉลียง':'#ffedd5','อื่น ๆ':'#f3e8ff'};
+const STROKES={'พื้นที่หลัก':'#db2777','ส่วนต่อเติม':'#16a34a','ที่จอดรถ':'#d97706','ระเบียง':'#2563eb','เฉลียง':'#ea580c','อื่น ๆ':'#9333ea'};
+let floors=[
+ {name:'ชั้น 1',items:[
+  {type:'พื้นที่หลัก',name:'ตัวอาคาร',w:5,d:7}
+ ]}
+];
+const $=id=>document.getElementById(id), area=x=>(Number(x.w)||0)*(Number(x.d)||0);
+function getPropertyType(){return $('propertyType').value==='อื่น ๆ'?($('otherType').value.trim()||'อื่น ๆ'):$('propertyType').value}
+$('propertyType').addEventListener('change',()=>{$('otherTypeWrap').style.display=$('propertyType').value==='อื่น ๆ'?'block':'none'});
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+function renderEditor(){
+ $('editor').innerHTML='';
+ floors.forEach((f,fi)=>{
+  const div=document.createElement('div');div.className='floor';
+  div.innerHTML=`<div class="row"><strong>${esc(f.name)}</strong>${fi?`<button class="btn" data-act="removeFloor" data-fi="${fi}">ลบชั้น</button>`:''}</div>`;
+  f.items.forEach((x,ii)=>{
+   const item=document.createElement('div');item.className='item';
+   item.innerHTML=`<div class="row"><strong>${x.type}</strong><button class="btn" data-act="removeItem" data-fi="${fi}" data-ii="${ii}">ลบ</button></div>
+   <label>ชื่อรายการ<input data-k="name" data-fi="${fi}" data-ii="${ii}" value="${esc(x.name)}"></label>
+   <label>ประเภท<select data-k="type" data-fi="${fi}" data-ii="${ii}">${TYPES.map(t=>`<option ${t===x.type?'selected':''}>${t}</option>`).join('')}</select></label>
+   <div class="two"><label>กว้าง (ม.)<input type="number" step="0.1" min="0.1" data-k="w" data-fi="${fi}" data-ii="${ii}" value="${x.w}"></label>
+   <label>ลึก (ม.)<input type="number" step="0.1" min="0.1" data-k="d" data-fi="${fi}" data-ii="${ii}" value="${x.d}"></label></div>
+   <div class="muted" style="margin-top:6px">พื้นที่ ${area(x).toFixed(2)} ตร.ม.</div>`;
+   div.appendChild(item);
+  });
+  $('editor').appendChild(div);
+ });
+}
+
+function autoLayout(f){
+ const main=f.items.find(x=>x.type==='พื้นที่หลัก');
+ if(!main)return;
+
+ f.items.forEach(x=>{delete x.ox;delete x.oy});
+ main.ox=0; main.oy=0;
+
+ // 1) Back additions: touch the main building's rear edge exactly.
+ let backEdge = main.d/2;
+ f.items.filter(x=>x.type==='ส่วนต่อเติม').forEach(x=>{
+   x.ox=0;
+   x.oy=backEdge + x.d/2;
+   backEdge += x.d;
+ });
+
+ // 2) Front porch/balcony: touch the main building's front edge exactly.
+ let frontEdge = -main.d/2;
+ f.items.filter(x=>x.type==='เฉลียง'||x.type==='ระเบียง').forEach(x=>{
+   x.ox=0;
+   x.oy=frontEdge - x.d/2;
+   frontEdge -= x.d;
+ });
+
+ // 3) Parking: place directly beside the front-most block, no gap.
+ const parking=f.items.filter(x=>x.type==='ที่จอดรถ');
+ parking.forEach((x,i)=>{
+   x.ox = main.w/2 + x.w/2;
+   x.oy = -main.d/2 + x.d/2 + i*(x.d+0.01);
+ });
+
+ // 4) Other: attach to the right edge of the main building.
+ f.items.filter(x=>x.type==='อื่น ๆ').forEach((x,i)=>{
+   x.ox = main.w/2 + x.w/2;
+   x.oy = main.d/2 - x.d/2 - i*(x.d+0.01);
+ });
+}
+function geom(f){
+ const scale=48, main=f.items.find(x=>x.type==='พื้นที่หลัก')||{w:5,d:5};
+ const all=f.items; let minX=-main.w/2,maxX=main.w/2,minY=-main.d/2,maxY=main.d/2;
+ all.forEach(x=>{const ox=Number(x.ox)||0,oy=Number(x.oy)||0;minX=Math.min(minX,ox-x.w/2);maxX=Math.max(maxX,ox+x.w/2);minY=Math.min(minY,oy-x.d/2);maxY=Math.max(maxY,oy+x.d/2)});
+ return {scale,minX,maxX,minY,maxY,main};
+}
+
+function makePlan(f,fi,interactive=true){
+ autoLayoutIfMissing(f);
+ const {scale,minX,maxX,minY,maxY}=geom(f), pad=95, road=70;
+ const W=Math.max(620,(maxX-minX)*scale+pad*2),H=(maxY-minY)*scale+pad*2+road;
+ const ox=pad-minX*scale, oy=pad-minY*scale;
+ let out=`<svg class="plan-svg" data-fi="${fi}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}">
+ <rect width="${W}" height="${H}" fill="#fff"/>
+ <text x="${W/2}" y="25" text-anchor="middle" font-family="Arial,sans-serif" font-size="17" font-weight="700">${esc(f.name)}</text>`;
+ f.items.forEach((x,ii)=>{
+  const cx=ox+(Number(x.ox)||0)*scale, cy=oy+(Number(x.oy)||0)*scale;
+  const w=x.w*scale,h=x.d*scale,xp=cx-w/2,yp=cy-h/2;
+  out+=`<g class="drag-box" data-fi="${fi}" data-ii="${ii}" transform="translate(${xp} ${yp})" ${interactive?'style="cursor:grab"':''}>
+    <rect width="${w}" height="${h}" rx="3" fill="${COLORS[x.type]}" stroke="${STROKES[x.type]}" stroke-width="2"/>
+    <text x="${w/2}" y="${Math.max(16,h/2-12)}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="700">${esc(x.type)}</text>
+    <text x="${w/2}" y="${Math.max(32,h/2+4)}" text-anchor="middle" font-family="Arial,sans-serif" font-size="11">${esc(x.name)}</text>
+    <text x="${w/2}" y="${Math.max(47,h/2+20)}" text-anchor="middle" font-family="Arial,sans-serif" font-size="10">${x.w} × ${x.d} ม. | ${area(x).toFixed(2)} ตร.ม.</text>
+  </g>`;
+ });
+ const roadY=H-road+8;
+ out+=`<rect x="0" y="${roadY}" width="${W}" height="${road-8}" fill="#e5e7eb"/>
+ <line x1="0" y1="${roadY}" x2="${W}" y2="${roadY}" stroke="#374151" stroke-width="3"/>
+ <text x="${W/2}" y="${roadY+38}" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="700">ถนน / ด้านหน้าบ้าน</text>
+ <path d="M${W/2-10} ${roadY-2} L${W/2+10} ${roadY-2} L${W/2} ${roadY-22} Z" fill="#111827"/>
+ <text x="${W/2}" y="${roadY-28}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12">ทางเข้าบ้าน</text>
+ </svg>`;
+ return out;
+}
+function autoLayoutIfMissing(f){if(!f.items.some(x=>x.type==='พื้นที่หลัก'))return; if(f.items.some(x=>x.ox===undefined||x.oy===undefined))autoLayout(f)}
+
+function renderPlans(){
+ $('plans').innerHTML='';
+ floors.forEach((f,fi)=>{
+  autoLayoutIfMissing(f);
+  const a=f.items.reduce((s,x)=>s+area(x),0);
+  const el=document.createElement('div');el.className='card planbox';
+  el.innerHTML=`<div class="plan-title"><strong>${esc(f.name)}</strong><span>${a.toFixed(2)} ตร.ม.</span></div>${makePlan(f,fi,true)}`;
+  $('plans').appendChild(el);
+  enableDrag(el.querySelector('svg'));
+ });
+ const totals={};floors.forEach(f=>f.items.forEach(x=>totals[x.type]=(totals[x.type]||0)+area(x)));
+ const grand=Object.values(totals).reduce((a,b)=>a+b,0);$('grand').textContent=grand.toFixed(2)+' ตร.ม.';
+ $('summary').innerHTML=TYPES.filter(t=>totals[t]).map(t=>`<div class="metric" style="background:${COLORS[t]}"><div class="muted">${t}</div><div class="num">${totals[t].toFixed(2)}</div><div class="muted">ตร.ม.</div></div>`).join('');
+ const table=$('areaTable'),active=TYPES.filter(t=>totals[t]);
+ table.querySelector('thead').innerHTML='<tr><th>รายการ</th>'+floors.map(f=>`<th>${esc(f.name)}</th>`).join('')+'<th>รวม</th></tr>';
+ table.querySelector('tbody').innerHTML=active.map(type=>`<tr><td>${type}</td>${floors.map(f=>{const v=f.items.filter(x=>x.type===type).reduce((s,x)=>s+area(x),0);return `<td>${v?v.toFixed(2):'-'}</td>`}).join('')}<td><strong>${totals[type].toFixed(2)}</strong></td></tr>`).join('')
+ +`<tr><td><strong>รวมทั้งหมด</strong></td>${floors.map(f=>`<td><strong>${f.items.reduce((s,x)=>s+area(x),0).toFixed(2)}</strong></td>`).join('')}<td><strong>${grand.toFixed(2)}</strong></td></tr>`;
+}
+
+function enableDrag(svg){
+ if(!svg)return;
+ let active=null, pressTimer=null, startX=0,startY=0,startOx=0,startOy=0, moved=false;
+ const scale=48;
+
+ const cancelPress=()=>{
+   if(pressTimer){clearTimeout(pressTimer);pressTimer=null;}
+ };
+
+ svg.addEventListener('pointerdown',e=>{
+   const g=e.target.closest('.drag-box');
+   if(!g || e.pointerType==='mouse' && e.button!==0)return;
+
+   const fi=+g.dataset.fi,ii=+g.dataset.ii;
+   const x=floors[fi].items[ii];
+   startX=e.clientX;startY=e.clientY;startOx=Number(x.ox)||0;startOy=Number(x.oy)||0;
+   moved=false;
+
+   // Long press = edit position. A normal swipe remains a page scroll.
+   pressTimer=setTimeout(()=>{
+     active={fi,ii,g};
+     g.classList.add('dragging');
+     try{navigator.vibrate?.(12)}catch(_){}
+   },320);
+ });
+
+ svg.addEventListener('pointermove',e=>{
+   if(!active){
+     if(Math.hypot(e.clientX-startX,e.clientY-startY)>8) cancelPress();
+     return;
+   }
+   moved=true;
+   const dx=(e.clientX-startX)*(svg.viewBox.baseVal.width/svg.getBoundingClientRect().width)/scale;
+   const dy=(e.clientY-startY)*(svg.viewBox.baseVal.height/svg.getBoundingClientRect().height)/scale;
+   const x=floors[active.fi].items[active.ii];
+   x.ox=startOx+dx;x.oy=startOy+dy;
+
+   const {minX,minY}=geom(floors[active.fi]),pad=95;
+   const tx=pad-minX*scale+x.ox*scale-(x.w*scale)/2;
+   const ty=pad-minY*scale+x.oy*scale-(x.d*scale)/2;
+   active.g.setAttribute('transform',`translate(${tx} ${ty})`);
+   e.preventDefault();
+ });
+
+ const finish=()=>{
+   cancelPress();
+   if(active){
+     active.g.classList.remove('dragging');
+     active=null;
+     renderPlans();
+   }
+ };
+ svg.addEventListener('pointerup',finish);
+ svg.addEventListener('pointercancel',finish);
+ svg.addEventListener('pointerleave',()=>{if(active)finish()});
+}
+function render(){renderEditor();renderPlans()}
+$('editor').addEventListener('input',e=>{
+ const fi=e.target.dataset.fi,ii=e.target.dataset.ii,k=e.target.dataset.k;if(fi===undefined)return;
+ let v=e.target.value;if(k==='w'||k==='d')v=Math.max(.1,Number(v)||.1);
+ floors[+fi].items[+ii][k]=v;renderPlans();
+});
+$('editor').addEventListener('change',e=>{
+ const fi=e.target.dataset.fi,ii=e.target.dataset.ii,k=e.target.dataset.k;if(fi===undefined)return;
+ floors[+fi].items[+ii][k]=e.target.value;renderPlans();
+});
+$('editor').addEventListener('click',e=>{
+ const a=e.target.dataset.act;if(!a)return;const fi=+e.target.dataset.fi;
+ if(a==='removeFloor'){floors.splice(fi,1);floors.forEach((f,i)=>f.name='ชั้น '+(i+1));render()}
+ if(a==='removeItem'){floors[fi].items.splice(+e.target.dataset.ii,1);render()}
+});
+document.querySelectorAll('[data-add-type]').forEach(btn=>btn.onclick=()=>{
+ const type=btn.dataset.addType,fi=floors.length-1;
+ const names={'พื้นที่หลัก':'อาคารหลัก','ส่วนต่อเติม':'ส่วนต่อเติมใหม่','ที่จอดรถ':'ที่จอดรถ','ระเบียง':'ระเบียง','เฉลียง':'เฉลียง','อื่น ๆ':'พื้นที่อื่น ๆ'};
+ floors[fi].items.push({type,name:names[type],w:type==='ที่จอดรถ'?5:3,d:type==='พื้นที่หลัก'?6:(type==='ส่วนต่อเติม'?2:2)});
+ autoLayout(floors[fi]);render();
+ const items=document.querySelectorAll('#editor .item'); items[items.length-1]?.scrollIntoView({behavior:'smooth',block:'center'});
+});
+$('addFloor').onclick=()=>{floors.push({name:'ชั้น '+(floors.length+1),items:[{type:'พื้นที่หลัก',name:'ตัวอาคาร',w:5,d:5}]});render()};
+$('generate').onclick=()=>{floors.forEach(autoLayout);render()};
+$('resetLayout').onclick=()=>{floors.forEach(autoLayout);render()};
+$('save').onclick=()=>{const data={propertyType:getPropertyType(),floors,updatedAt:new Date().toISOString()};localStorage.setItem('autoBuildingSketchV2',JSON.stringify(data));$('propertyLabel').textContent='ประเภททรัพย์: '+getPropertyType();$('notice').textContent='บันทึกข้อมูลทรัพย์และตำแหน่งกล่องแล้ว';$('notice').style.display='block'};
+$('load').onclick=()=>{const raw=localStorage.getItem('autoBuildingSketchV2');if(!raw){$('notice').textContent='ยังไม่มีข้อมูลที่บันทึกไว้';$('notice').style.display='block';return}const d=JSON.parse(raw);const presets=['บ้านเดี่ยว','บ้านแฝด','ทาวน์เฮ้าส์','อาคารพาณิชย์','อาคารสำนักงาน','โรงงาน','โกดัง'];if(presets.includes(d.propertyType)){$('propertyType').value=d.propertyType;$('otherTypeWrap').style.display='none'}else{$('propertyType').value='อื่น ๆ';$('otherType').value=d.propertyType||'';$('otherTypeWrap').style.display='block'}floors=d.floors||floors;render();$('propertyLabel').textContent='ประเภททรัพย์: '+getPropertyType();$('notice').textContent='โหลดข้อมูลล่าสุดแล้ว';$('notice').style.display='block'};
+$('clear').onclick=()=>{if(confirm('เริ่มข้อมูลใหม่ใช่ไหม?')){floors=[{name:'ชั้น 1',items:[{type:'พื้นที่หลัก',name:'ตัวอาคาร',w:5,d:7}]}];$('propertyType').value='บ้านเดี่ยว';$('otherType').value='';$('otherTypeWrap').style.display='none';render()}};
+$('exportImage').onclick=async()=>{
+ try{
+   const svgs=floors.map((f,fi)=>makePlan(f,fi,false));
+   const parsed=svgs.map(s=>{
+     const doc=new DOMParser().parseFromString(s,'image/svg+xml');
+     const svg=doc.documentElement;
+     const vb=svg.getAttribute('viewBox').split(/\s+/).map(Number);
+     return {s,w:vb[2],h:vb[3]};
+   });
+   const gap=36, header=48;
+   const W=Math.max(...parsed.map(x=>x.w),620);
+   const H=header+parsed.reduce((sum,x)=>sum+x.h,0)+gap*(parsed.length-1);
+   const canvas=document.createElement('canvas');
+   const ratio=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+   canvas.width=Math.round(W*ratio);canvas.height=Math.round(H*ratio);
+   const ctx=canvas.getContext('2d');
+   ctx.scale(ratio,ratio);
+   ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+   ctx.fillStyle='#111827';ctx.font='700 22px -apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif';
+   ctx.textAlign='center';ctx.fillText('ผังสิ่งปลูกสร้าง',W/2,30);
+
+   let y=header;
+   for(const item of parsed){
+     const img=new Image();
+     const data='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(item.s);
+     await new Promise((resolve,reject)=>{
+       img.onload=resolve;img.onerror=reject;img.src=data;
+     });
+     const x=(W-item.w)/2;
+     ctx.drawImage(img,x,y,item.w,item.h);
+     y+=item.h+gap;
+   }
+   canvas.toBlob(blob=>{
+     if(!blob)throw new Error('ไม่สามารถสร้างไฟล์รูปภาพได้');
+     const a=document.createElement('a');
+     a.href=URL.createObjectURL(blob);
+     a.download=(getPropertyType()||'building-plan')+'.png';
+     a.click();
+     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+   },'image/png');
+ }catch(err){
+   alert('ไม่สามารถ Export รูปภาพได้ กรุณาลองอีกครั้ง');
+   console.error(err);
+ }
+};
+render();
+</script>
+</body>
+</html>
